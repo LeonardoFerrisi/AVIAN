@@ -19,6 +19,8 @@ class AVIAN_MainWindow(object):
         self.centralwidget = QtWidgets.QWidget(AVIAN_GUI)
         self.centralwidget.setObjectName("centralwidget")
 
+        # init board
+        self._init_board()
 
         # Time Series
         self.TimeSeries = pg.GraphicsLayoutWidget(self.centralwidget)
@@ -26,20 +28,21 @@ class AVIAN_MainWindow(object):
         self.TimeSeries.setGeometry(QtCore.QRect(9, 9, 611, 851))
         self.TimeSeries.setObjectName("TimeSeries")
 
-        # init board
-        self._init_board()
-
         # init time series
         self._init_pens()
         self._init_time_series()
 
-
-        self.BandPowers = PlotWidget(self.centralwidget)
+        self.BandPowers = pg.GraphicsLayoutWidget(self.centralwidget)
+        self.BandPowers.setBackground('w')
         self.BandPowers.setGeometry(QtCore.QRect(1090, 10, 551, 511))
         self.BandPowers.setObjectName("BandPowers")
+
+        self._init_band_powers()
+
         self.start_button = QtWidgets.QPushButton(self.centralwidget)
         self.start_button.setGeometry(QtCore.QRect(640, 140, 75, 23))
         self.start_button.setObjectName("start_button")
+
         self.stop_button = QtWidgets.QPushButton(self.centralwidget)
         self.stop_button.setGeometry(QtCore.QRect(720, 140, 75, 23))
         self.stop_button.setObjectName("stop_button")
@@ -132,9 +135,11 @@ class AVIAN_MainWindow(object):
         self.chan_5 = QtWidgets.QLabel(self.centralwidget)
         self.chan_5.setGeometry(QtCore.QRect(910, 400, 16, 16))
         self.chan_5.setObjectName("chan_5")
+
         self.FFT_plot = PlotWidget(self.centralwidget)
-        self.FFT_plot.setGeometry(QtCore.QRect(1180, 530, 461, 341))
+        self.FFT_plot.setGeometry(QtCore.QRect(1180, 600, 450, 270))
         self.FFT_plot.setObjectName("FFT_plot")
+
         self.indicator = QtWidgets.QWidget(self.centralwidget)
         self.indicator.setGeometry(QtCore.QRect(640, 40, 231, 80))
         self.indicator.setObjectName("indicator")
@@ -147,7 +152,7 @@ class AVIAN_MainWindow(object):
         # self.imagePlaceHolder.setGeometry(QtCore.QRect(690, 560, 321, 291))
         # self.imagePlaceHolder.setObjectName("imagePlaceHolder")
 
-
+        self._init_value_labels()
 
         AVIAN_GUI.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(AVIAN_GUI)
@@ -177,7 +182,6 @@ class AVIAN_MainWindow(object):
         self.start_button.clicked.connect(self.startAction)
         self.stop_button.clicked.connect(self.stopAction)
 
-
         self.retranslateUi(AVIAN_GUI)
 
         self.running = False
@@ -188,8 +192,54 @@ class AVIAN_MainWindow(object):
 
         QtCore.QMetaObject.connectSlotsByName(AVIAN_GUI)
 
+    def _init_value_labels(self):
+        self.horizontalLayoutWidget = QtWidgets.QWidget(self.centralwidget)
+        self.horizontalLayoutWidget.setGeometry(QtCore.QRect(1180, 530, 461, 21))
+        self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
+        self.band_label_holder = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
+        self.band_label_holder.setContentsMargins(0, 0, 0, 0)
+        self.band_label_holder.setObjectName("band_label_holder")
+        self.gamma_label = QtWidgets.QLabel(self.horizontalLayoutWidget)
+        self.gamma_label.setObjectName("gamma_label")
+        self.band_label_holder.addWidget(self.gamma_label)
+        self.delta_label = QtWidgets.QLabel(self.horizontalLayoutWidget)
+        self.delta_label.setObjectName("delta_label")
+        self.band_label_holder.addWidget(self.delta_label)
+        self.theta_label = QtWidgets.QLabel(self.horizontalLayoutWidget)
+        self.theta_label.setObjectName("theta_label")
+        self.band_label_holder.addWidget(self.theta_label)
+        self.beta_label = QtWidgets.QLabel(self.horizontalLayoutWidget)
+        self.beta_label.setObjectName("beta_label")
+        self.band_label_holder.addWidget(self.beta_label)
+        self.alpha_label = QtWidgets.QLabel(self.horizontalLayoutWidget)
+        self.alpha_label.setObjectName("alpha_label")
+        self.band_label_holder.addWidget(self.alpha_label)
+        self.horizontalLayoutWidget_2 = QtWidgets.QWidget(self.centralwidget)
+        self.horizontalLayoutWidget_2.setGeometry(QtCore.QRect(1180, 560, 461, 21))
+        self.horizontalLayoutWidget_2.setObjectName("horizontalLayoutWidget_2")
+        self.value_holder = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget_2)
+        self.value_holder.setContentsMargins(0, 0, 0, 0)
+        self.value_holder.setObjectName("value_holder")
+        self.gamma_value = QtWidgets.QLabel(self.horizontalLayoutWidget_2)
+        self.gamma_value.setObjectName("gamma_value")
+        self.value_holder.addWidget(self.gamma_value)
+        self.delta_value = QtWidgets.QLabel(self.horizontalLayoutWidget_2)
+        self.delta_value.setObjectName("delta_value")
+        self.value_holder.addWidget(self.delta_value)
+        self.theta_value = QtWidgets.QLabel(self.horizontalLayoutWidget_2)
+        self.theta_value.setObjectName("theta_value")
+        self.value_holder.addWidget(self.theta_value)
+        self.beta_value = QtWidgets.QLabel(self.horizontalLayoutWidget_2)
+        self.beta_value.setObjectName("beta_value")
+        self.value_holder.addWidget(self.beta_value)
+        self.alpha_value = QtWidgets.QLabel(self.horizontalLayoutWidget_2)
+        self.alpha_value.setObjectName("alpha_value")
+        self.value_holder.addWidget(self.alpha_value)
 
     def startAction(self):
+        """
+        Starts the board and sets running to true
+        """
         self.board_shim.prepare_session()
         self.IS_CONNECTED.setText("[ Is connected: True ]")
         self.board_shim.start_stream(450000, '')
@@ -200,7 +250,6 @@ class AVIAN_MainWindow(object):
         self.board_shim.release_session()
         self.IS_CONNECTED.setText("[ Is connected: False ]")
         self.running = False
-
 
     def _init_pens(self):
         self.pens = list()
@@ -222,6 +271,20 @@ class AVIAN_MainWindow(object):
         self.num_points = self.window_size * self.sampling_rate
         self.board_shim = BoardShim(self.board_id, params)
 
+        self.psd_size = DataFilter.get_nearest_power_of_two(self.sampling_rate)
+
+    def _init_band_powers(self):
+        self.band_plot = self.BandPowers.addPlot(row=len(self.exg_channels) // 2, col=1,
+                                                 rowspan=len(self.exg_channels) // 2)
+        self.band_plot.showAxis('left', True)
+        self.band_plot.setMenuEnabled('left', False)
+        self.band_plot.showAxis('bottom', True)
+        self.band_plot.setMenuEnabled('bottom', False)
+        self.band_plot.setTitle('BandPower Plot')
+        y = [0, 0, 0, 0, 0]
+        x = [1, 2, 3, 4, 5]
+        self.band_bar = pg.BarGraphItem(x=x, height=y, width=0.8, pen=self.pens[0], brush=self.brushes[0])
+        self.band_plot.addItem(self.band_bar)
 
     def _init_time_series(self):
         self.plots = list()
@@ -239,9 +302,23 @@ class AVIAN_MainWindow(object):
             # curve.setDownsampling(auto=True, method='mean', ds=3)
             self.curves.append(curve)
 
+    # def _init_psd(self):
+    #     # self.psd_plot = self.win.addPlot(row=0, col=1, rowspan=len(self.exg_channels) // 2)
+    #     # self.psd_plot.showAxis('left', False)
+    #     # self.psd_plot.setMenuEnabled('left', False)
+    #     # self.psd_plot.setTitle('PSD Plot')
+    #     # self.psd_plot.setLogMode(False, True)
+    #     self.psd_curves = list()
+    #     self.psd_size = DataFilter.get_nearest_power_of_two(self.sampling_rate)
+    # for i in range(len(self.exg_channels)):
+    #     psd_curve = self.psd_plot.plot(pen=self.pens[i % len(self.pens)])
+    #     psd_curve.setDownsampling(auto=True, method='mean', ds=3)
+    #     self.psd_curves.append(psd_curve)
+    #
     def update(self):
         if self.running:
             data = self.board_shim.get_current_board_data(self.num_points)
+            avg_bands = [0, 0, 0, 0, 0]
             for count, channel in enumerate(self.exg_channels):
                 # plot timeseries
                 DataFilter.detrend(data[channel], DetrendOperations.CONSTANT.value)
@@ -256,7 +333,31 @@ class AVIAN_MainWindow(object):
                 self.curves[count].setData(data[channel].tolist())
                 # time_elapsed = float(time.time()-self.startTime)
                 # self.label_2.setText("[" + str(round(time_elapsed,3)) + "]")
+
+                # BAND POWER PROCESSING
+                if data.shape[1] > DataFilter.get_nearest_power_of_two(self.sampling_rate):
+                    psd_data = DataFilter.get_psd_welch(data[channel], self.psd_size, self.psd_size // 2,
+                                                        self.sampling_rate,
+                                                        WindowFunctions.BLACKMAN_HARRIS.value)
+
+                    avg_bands[0] = avg_bands[0] + DataFilter.get_band_power(psd_data, 1.0, 4.0)  # Delta
+                    avg_bands[1] = avg_bands[1] + DataFilter.get_band_power(psd_data, 4.0, 7.0)  # Theta
+                    avg_bands[2] = avg_bands[2] + DataFilter.get_band_power(psd_data, 7.0, 13.0)  # Alpha
+                    avg_bands[3] = avg_bands[3] + DataFilter.get_band_power(psd_data, 13.0, 30.0)  # Beta
+                    avg_bands[4] = avg_bands[4] + DataFilter.get_band_power(psd_data, 30.0, 50.0)  # Gamma
+
+                    self.alpha_value.setText("[" + str(round(avg_bands[2], 3)) + "]")
+                    self.beta_value.setText("[" + str(round(avg_bands[3], 3)) + "]")
+                    self.theta_value.setText("[" + str(round(avg_bands[1], 3)) + "]")
+                    self.delta_value.setText("[" + str(round(avg_bands[0], 3)) + "]")
+                    self.gamma_value.setText("[" + str(round(avg_bands[4], 3)) + "]")
+
+            avg_bands = [int(x * 100 / len(self.exg_channels)) for x in avg_bands]
+
+            self.band_bar.setOpts(height=avg_bands)
+
             self.app.processEvents()
+
             self.statusbar.showMessage("Current data buffer size: " + str(data.size))
         else:
             pass
@@ -292,16 +393,30 @@ class AVIAN_MainWindow(object):
         self.chan_3.setText(_translate("AVIAN_GUI", "[3]"))
         self.chan_4.setText(_translate("AVIAN_GUI", "[4]"))
         self.chan_5.setText(_translate("AVIAN_GUI", "[5]"))
+
+        self.gamma_label.setText(_translate("AVIAN_GUI", "GAMMA"))
+        self.delta_label.setText(_translate("AVIAN_GUI", "DELTA"))
+        self.theta_label.setText(_translate("AVIAN_GUI", "THETA"))
+        self.beta_label.setText(_translate("AVIAN_GUI", "BETA"))
+        self.alpha_label.setText(_translate("AVIAN_GUI", "ALPHA"))
+        self.gamma_value.setText(_translate("AVIAN_GUI", "[ ]"))
+        self.delta_value.setText(_translate("AVIAN_GUI", "[ ]"))
+        self.theta_value.setText(_translate("AVIAN_GUI", "[ ]"))
+        self.beta_value.setText(_translate("AVIAN_GUI", "[ ]"))
+        self.alpha_value.setText(_translate("AVIAN_GUI", "[ ]"))
+
         self.menuFile.setTitle(_translate("AVIAN_GUI", "File"))
         self.menuHelp.setTitle(_translate("AVIAN_GUI", "Help"))
         self.actionSave_as_CSV.setText(_translate("AVIAN_GUI", "Save as CSV"))
         self.actionGithub.setText(_translate("AVIAN_GUI", "Github"))
         self.actionDocumentation.setText(_translate("AVIAN_GUI", "Documentation"))
-from pyqtgraph import GraphicsLayoutWidget, PlotWidget
 
+
+from pyqtgraph import GraphicsLayoutWidget, PlotWidget
 
 if __name__ == "__main__":
     import sys
+
     app = QtGui.QApplication([])
     AVIAN_GUI = QtWidgets.QMainWindow()
     ui = AVIAN_MainWindow()
