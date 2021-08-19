@@ -3,6 +3,11 @@ import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui
 from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds, BrainFlowError
 from brainflow.data_filter import DataFilter, FilterTypes, AggOperations, WindowFunctions, DetrendOperations
+from board_communicator import Comms
+from signal_converter_relay import DataThread
+from music_maker import NOMI as musicMaker
+from threading import Thread
+import random
 import time
 
 
@@ -20,7 +25,7 @@ class AVIAN_MainWindow(object):
         self.centralwidget.setObjectName("centralwidget")
 
         # init board
-        self._init_board()
+        self._init_board()  # INIT BOARD
 
         # Time Series
         self.TimeSeries = pg.GraphicsLayoutWidget(self.centralwidget)
@@ -60,13 +65,13 @@ class AVIAN_MainWindow(object):
         self.star_two = QtWidgets.QLabel(self.centralwidget)
         self.star_two.setGeometry(QtCore.QRect(910, 10, 171, 20))
         self.star_two.setObjectName("star_two")
-        self.comboBox = QtWidgets.QComboBox(self.centralwidget)
-        self.comboBox.setGeometry(QtCore.QRect(940, 40, 121, 22))
-        self.comboBox.setObjectName("comboBox")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
+        self.boardSelect = QtWidgets.QComboBox(self.centralwidget)
+        self.boardSelect.setGeometry(QtCore.QRect(940, 40, 121, 22))
+        self.boardSelect.setObjectName("comboBox")
+        self.boardSelect.addItem("")
+        self.boardSelect.addItem("")
+        self.boardSelect.addItem("")
+        self.boardSelect.addItem("")
         self.selectmetric = QtWidgets.QLabel(self.centralwidget)
         self.selectmetric.setGeometry(QtCore.QRect(640, 170, 181, 16))
         self.selectmetric.setObjectName("selectmetric")
@@ -79,19 +84,30 @@ class AVIAN_MainWindow(object):
         self.disconnect_button = QtWidgets.QPushButton(self.centralwidget)
         self.disconnect_button.setGeometry(QtCore.QRect(990, 70, 75, 23))
         self.disconnect_button.setObjectName("disconnect_button")
+
+
         self.playaudio_true_button = QtWidgets.QRadioButton(self.centralwidget)
         self.playaudio_true_button.setGeometry(QtCore.QRect(820, 270, 51, 17))
         self.playaudio_true_button.setObjectName("playaudio_true_button")
+        # self.playaudio_true_button.toggled.connect(self.audioOnAction)
+        self.playaudio_true_button.clicked.connect(self.audioOnAction)
+
         self.playaudio_false_button = QtWidgets.QRadioButton(self.centralwidget)
         self.playaudio_false_button.setGeometry(QtCore.QRect(880, 270, 51, 17))
         self.playaudio_false_button.setObjectName("playaudio_false_button")
+        # self.playaudio_false_button.toggled.connect(self.audioOffAction)
+        self.playaudio_false_button.clicked.connect(self.audioOffAction)
+
+
         self.playaud_label = QtWidgets.QLabel(self.centralwidget)
         self.playaud_label.setGeometry(QtCore.QRect(640, 270, 151, 16))
         self.playaud_label.setObjectName("playaud_label")
+
         self.confidence = QtWidgets.QProgressBar(self.centralwidget)
         self.confidence.setGeometry(QtCore.QRect(640, 230, 331, 23))
         self.confidence.setProperty("value", 0)
         self.confidence.setObjectName("confidence")
+
         self.progressBar = QtWidgets.QProgressBar(self.centralwidget)
         self.progressBar.setGeometry(QtCore.QRect(700, 300, 41, 91))
         self.progressBar.setProperty("value", 0)
@@ -148,6 +164,7 @@ class AVIAN_MainWindow(object):
         self.pic.setGeometry(QtCore.QRect(690, 560, 321, 291))
         self.pic.setPixmap(QtGui.QPixmap("AVIAN.png"))
         self.pic.show()
+
         # self.imagePlaceHolder = QtWidgets.QWidget(self.centralwidget)
         # self.imagePlaceHolder.setGeometry(QtCore.QRect(690, 560, 321, 291))
         # self.imagePlaceHolder.setObjectName("imagePlaceHolder")
@@ -199,6 +216,7 @@ class AVIAN_MainWindow(object):
         self.band_label_holder = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
         self.band_label_holder.setContentsMargins(0, 0, 0, 0)
         self.band_label_holder.setObjectName("band_label_holder")
+
         self.gamma_label = QtWidgets.QLabel(self.horizontalLayoutWidget)
         self.gamma_label.setObjectName("gamma_label")
         self.band_label_holder.addWidget(self.gamma_label)
@@ -214,12 +232,14 @@ class AVIAN_MainWindow(object):
         self.alpha_label = QtWidgets.QLabel(self.horizontalLayoutWidget)
         self.alpha_label.setObjectName("alpha_label")
         self.band_label_holder.addWidget(self.alpha_label)
+
         self.horizontalLayoutWidget_2 = QtWidgets.QWidget(self.centralwidget)
         self.horizontalLayoutWidget_2.setGeometry(QtCore.QRect(1180, 560, 461, 21))
         self.horizontalLayoutWidget_2.setObjectName("horizontalLayoutWidget_2")
         self.value_holder = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget_2)
         self.value_holder.setContentsMargins(0, 0, 0, 0)
         self.value_holder.setObjectName("value_holder")
+
         self.gamma_value = QtWidgets.QLabel(self.horizontalLayoutWidget_2)
         self.gamma_value.setObjectName("gamma_value")
         self.value_holder.addWidget(self.gamma_value)
@@ -236,6 +256,8 @@ class AVIAN_MainWindow(object):
         self.alpha_value.setObjectName("alpha_value")
         self.value_holder.addWidget(self.alpha_value)
 
+        self.audioOn = False # Audio is default set to false
+
     def startAction(self):
         """
         Starts the board and sets running to true
@@ -244,6 +266,26 @@ class AVIAN_MainWindow(object):
         self.IS_CONNECTED.setText("[ Is connected: True ]")
         self.board_shim.start_stream(450000, '')
         self.running = True
+        # self.checkStateSelect()
+        if self.audioOn:
+            # self.musicMaker.brainAnalyzer()
+            self.__init_music_maker()
+            self.musicMaker.brainAnalyzer()
+            # self.runThread1 = Thread(target=self.musicMaker.musicMaker)
+            # self.runThread1.start()
+            print("RUNNING MM")
+            # self.runThread2 = Thread(target=self.StateProgressListener)
+            # self.runThread2.start()
+
+    # def StateProgressListener(self):
+    #     try:
+    #         myConfidence = self.musicMaker.prediction
+    #         print("FUNCTIONING")
+    #     except:
+    #         print("NOT")
+
+    def modStateProgressBar(self, newValue):
+        self.confidence.setProperty("value", float(round(newValue,3)))
 
     def stopAction(self):
         self.board_shim.stop_stream()
@@ -262,16 +304,56 @@ class AVIAN_MainWindow(object):
             self.brushes.append(brush)
 
     def _init_board(self):
-        params = BrainFlowInputParams()
-        self.board_id = -1
+        self.myBoard = Comms(serial='')  # Serial is default to nothing
+        self.board_shim = self.myBoard.board
+        # params = BrainFlowInputParams()
+        self.board_id = self.board_shim.board_id
         self.exg_channels = BoardShim.get_exg_channels(self.board_id)
         self.sampling_rate = BoardShim.get_sampling_rate(self.board_id)
         self.update_speed_ms = 50
         self.window_size = 4
         self.num_points = self.window_size * self.sampling_rate
-        self.board_shim = BoardShim(self.board_id, params)
+        # self.board_shim = BoardShim(self.board_id, params)
 
         self.psd_size = DataFilter.get_nearest_power_of_two(self.sampling_rate)
+
+    # def __init_signalConverter(self):
+    #     """
+    #     Must be run after _init_board(self)
+    #     Converts board stream into concentration values
+    #     :return:
+    #     """
+    #     self.signalConverter = DataThread(myBoardComm=self.board_shim, brainStateVal=self.brainStateVal)
+
+    def __init_music_maker(self):
+        """
+        Initiates the music maker,
+        relies on the signal converter relay, board communicator and NOMI in music maker
+        :return:
+        """
+        # self.checkStateSelect()
+        # self.musicMaker = musicMaker(self.board_shim)
+        if self.StateSelect.currentText() == "Concentration":
+            brainVal = 1
+        else:
+            brainVal = 0
+
+        self.musicMaker = musicMaker(self.myBoard, brainStateVal=brainVal)
+        # self.musicMaker.start()
+        self.musicMaker.loadWav()
+        self.ourPrediction = self.musicMaker.prediction
+
+    def runConcentration(self):
+        """
+        Set the brainstate to concentration
+        """
+        self.musicMaker.brainStateVal = 1
+
+    def runRelaxation(self):
+        """
+        Set the brainstate to relaxation
+        """
+        self.musicMaker.brainStateVal = 0
 
     def _init_band_powers(self):
         self.band_plot = self.BandPowers.addPlot(row=len(self.exg_channels) // 2, col=1,
@@ -354,6 +436,10 @@ class AVIAN_MainWindow(object):
 
             avg_bands = [int(x * 100 / len(self.exg_channels)) for x in avg_bands]
 
+            try:
+                self.confidence.setProperty("value", float(self.musicMaker.predictionOut)*100)
+            except:
+                pass
             self.band_bar.setOpts(height=avg_bands)
 
             self.app.processEvents()
@@ -361,6 +447,38 @@ class AVIAN_MainWindow(object):
             self.statusbar.showMessage("Current data buffer size: " + str(data.size))
         else:
             pass
+
+######################################
+    def audioOnAction(self):
+        print("AUDIO IS ON")
+        self.audioOn = True
+
+
+
+
+
+    def audioOffAction(self):
+        print("AUDIO IS OFF")
+        self.audioOn = False
+
+
+    def checkAudioOn(self):
+        if self.audioOn:
+            self.__init_music_maker()
+        else:
+            print("Audio set to off, doing nothing")
+
+    # def checkStateSelect(self):
+    #     """
+    #     Checks the comboBox holding the state we want to look for
+    #     :return:
+    #     """
+    #     if self.StateSelect.currentText() == "Concentration":
+    #         self.brainStateVal = 1
+    #     elif self.StateSelect.currentText() == "Releaxation":
+    #         self.brainStateVal = 0
+    #     else:
+    #         self.brainStateVal = 1
 
     def retranslateUi(self, AVIAN_GUI):
         _translate = QtCore.QCoreApplication.translate
@@ -374,10 +492,10 @@ class AVIAN_MainWindow(object):
         self.StateSelect.setItemText(4, _translate("AVIAN_GUI", "Beta Threshold"))
         self.star_one.setText(_translate("AVIAN_GUI", "* Make Sure Board is connected before Starting!"))
         self.star_two.setText(_translate("AVIAN_GUI", "** Select the board type below"))
-        self.comboBox.setItemText(0, _translate("AVIAN_GUI", "Synthetic"))
-        self.comboBox.setItemText(1, _translate("AVIAN_GUI", "OpenBCI [Cyton]"))
-        self.comboBox.setItemText(2, _translate("AVIAN_GUI", "Muse (2016) [Requires BLED112]"))
-        self.comboBox.setItemText(3, _translate("AVIAN_GUI", "Muse2 [Requires BLED112]"))
+        self.boardSelect.setItemText(0, _translate("AVIAN_GUI", "Synthetic"))
+        self.boardSelect.setItemText(1, _translate("AVIAN_GUI", "OpenBCI [Cyton]"))
+        self.boardSelect.setItemText(2, _translate("AVIAN_GUI", "Muse (2016) [Requires BLED112]"))
+        self.boardSelect.setItemText(3, _translate("AVIAN_GUI", "Muse2 [Requires BLED112]"))
         self.selectmetric.setText(_translate("AVIAN_GUI", "Select Metric to estimate:"))
 
         self.IS_CONNECTED.setText(_translate("AVIAN_GUI", "[ Is connected: False ]"))
@@ -398,7 +516,9 @@ class AVIAN_MainWindow(object):
         self.delta_label.setText(_translate("AVIAN_GUI", "DELTA"))
         self.theta_label.setText(_translate("AVIAN_GUI", "THETA"))
         self.beta_label.setText(_translate("AVIAN_GUI", "BETA"))
+
         self.alpha_label.setText(_translate("AVIAN_GUI", "ALPHA"))
+
         self.gamma_value.setText(_translate("AVIAN_GUI", "[ ]"))
         self.delta_value.setText(_translate("AVIAN_GUI", "[ ]"))
         self.theta_value.setText(_translate("AVIAN_GUI", "[ ]"))
