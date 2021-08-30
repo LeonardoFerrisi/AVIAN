@@ -1,3 +1,5 @@
+import multiprocessing
+
 from PyQt5 import QtCore, QtWidgets
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui
@@ -6,14 +8,18 @@ from brainflow.data_filter import DataFilter, FilterTypes, AggOperations, Window
 from board_communicator import Comms
 from signal_converter_relay import DataThread
 from music_maker import NOMI as musicMaker
+from music_maker2 import MM as musicMaker2
 from threading import Thread
 import random
 import time
+import scr
 
 
 class AVIAN_MainWindow(object):
 
     def setupUi(self, AVIAN_GUI, application):
+
+        self.enableTestSignalConverter = False
 
         AVIAN_GUI.setObjectName("AVIAN_GUI")
         AVIAN_GUI.resize(1650, 920)
@@ -85,7 +91,6 @@ class AVIAN_MainWindow(object):
         self.disconnect_button.setGeometry(QtCore.QRect(990, 70, 75, 23))
         self.disconnect_button.setObjectName("disconnect_button")
 
-
         self.playaudio_true_button = QtWidgets.QRadioButton(self.centralwidget)
         self.playaudio_true_button.setGeometry(QtCore.QRect(820, 270, 51, 17))
         self.playaudio_true_button.setObjectName("playaudio_true_button")
@@ -97,7 +102,7 @@ class AVIAN_MainWindow(object):
         self.playaudio_false_button.setObjectName("playaudio_false_button")
         # self.playaudio_false_button.toggled.connect(self.audioOffAction)
         self.playaudio_false_button.clicked.connect(self.audioOffAction)
-
+        self.playaudio_false_button.setChecked(True)
 
         self.playaud_label = QtWidgets.QLabel(self.centralwidget)
         self.playaud_label.setGeometry(QtCore.QRect(640, 270, 151, 16))
@@ -108,31 +113,6 @@ class AVIAN_MainWindow(object):
         self.confidence.setProperty("value", 0)
         self.confidence.setObjectName("confidence")
 
-        self.progressBar = QtWidgets.QProgressBar(self.centralwidget)
-        self.progressBar.setGeometry(QtCore.QRect(700, 300, 41, 91))
-        self.progressBar.setProperty("value", 0)
-        self.progressBar.setOrientation(QtCore.Qt.Vertical)
-        self.progressBar.setObjectName("progressBar")
-        self.progressBar_2 = QtWidgets.QProgressBar(self.centralwidget)
-        self.progressBar_2.setGeometry(QtCore.QRect(750, 300, 41, 91))
-        self.progressBar_2.setProperty("value", 0)
-        self.progressBar_2.setOrientation(QtCore.Qt.Vertical)
-        self.progressBar_2.setObjectName("progressBar_2")
-        self.progressBar_3 = QtWidgets.QProgressBar(self.centralwidget)
-        self.progressBar_3.setGeometry(QtCore.QRect(800, 300, 41, 91))
-        self.progressBar_3.setProperty("value", 0)
-        self.progressBar_3.setOrientation(QtCore.Qt.Vertical)
-        self.progressBar_3.setObjectName("progressBar_3")
-        self.progressBar_4 = QtWidgets.QProgressBar(self.centralwidget)
-        self.progressBar_4.setGeometry(QtCore.QRect(850, 300, 41, 91))
-        self.progressBar_4.setProperty("value", 0)
-        self.progressBar_4.setOrientation(QtCore.Qt.Vertical)
-        self.progressBar_4.setObjectName("progressBar_4")
-        self.progressBar_5 = QtWidgets.QProgressBar(self.centralwidget)
-        self.progressBar_5.setGeometry(QtCore.QRect(900, 300, 41, 91))
-        self.progressBar_5.setProperty("value", 0)
-        self.progressBar_5.setOrientation(QtCore.Qt.Vertical)
-        self.progressBar_5.setObjectName("progressBar_5")
         self.channels_label = QtWidgets.QLabel(self.centralwidget)
         self.channels_label.setGeometry(QtCore.QRect(640, 300, 51, 21))
         self.channels_label.setObjectName("channels_label")
@@ -256,7 +236,7 @@ class AVIAN_MainWindow(object):
         self.alpha_value.setObjectName("alpha_value")
         self.value_holder.addWidget(self.alpha_value)
 
-        self.audioOn = False # Audio is default set to false
+        self.audioOn = False  # Audio is default set to false
 
     def startAction(self):
         """
@@ -266,14 +246,19 @@ class AVIAN_MainWindow(object):
         self.IS_CONNECTED.setText("[ Is connected: True ]")
         self.board_shim.start_stream(450000, '')
         self.running = True
-        # self.checkStateSelect()
+
+        if self.enableTestSignalConverter:
+            self.mySCR = scr.SignalConverter(newBoardData=self.board_shim.get_current_board_data(self.num_points),
+                                             numEXG=self.myBoard.getEXGChannels(),
+                                             samplingRate=self.myBoard.get_samplingRate())
+
         if self.audioOn:
             # self.musicMaker.brainAnalyzer()
             self.__init_music_maker()
             self.musicMaker.brainAnalyzer()
             # self.runThread1 = Thread(target=self.musicMaker.musicMaker)
             # self.runThread1.start()
-            print("RUNNING MM")
+            # print("RUNNING MM")
             # self.runThread2 = Thread(target=self.StateProgressListener)
             # self.runThread2.start()
 
@@ -285,13 +270,15 @@ class AVIAN_MainWindow(object):
     #         print("NOT")
 
     def modStateProgressBar(self, newValue):
-        self.confidence.setProperty("value", float(round(newValue,3)))
+        self.confidence.setProperty("value", float(round(newValue, 3)))
 
     def stopAction(self):
         self.board_shim.stop_stream()
         self.board_shim.release_session()
         self.IS_CONNECTED.setText("[ Is connected: False ]")
         self.running = False
+        if self.audioOn:
+            self.musicMaker.kill()
 
     def _init_pens(self):
         self.pens = list()
@@ -317,14 +304,6 @@ class AVIAN_MainWindow(object):
 
         self.psd_size = DataFilter.get_nearest_power_of_two(self.sampling_rate)
 
-    # def __init_signalConverter(self):
-    #     """
-    #     Must be run after _init_board(self)
-    #     Converts board stream into concentration values
-    #     :return:
-    #     """
-    #     self.signalConverter = DataThread(myBoardComm=self.board_shim, brainStateVal=self.brainStateVal)
-
     def __init_music_maker(self):
         """
         Initiates the music maker,
@@ -334,11 +313,15 @@ class AVIAN_MainWindow(object):
         # self.checkStateSelect()
         # self.musicMaker = musicMaker(self.board_shim)
         if self.StateSelect.currentText() == "Concentration":
-            brainVal = 1
+            self.brainVal = 1
+        elif self.StateSelect.currentText() == "Releaxation":
+            self.brainVal = 0
+        elif self.StateSelect.currentText() == "Theta/Beta":
+            self.brainVal = 2
         else:
-            brainVal = 0
+            self.brainVal = 0
 
-        self.musicMaker = musicMaker(self.myBoard, brainStateVal=brainVal)
+        self.musicMaker = musicMaker(self.myBoard, brainStateVal=self.brainVal)
         # self.musicMaker.start()
         self.musicMaker.loadWav()
         self.ourPrediction = self.musicMaker.prediction
@@ -384,22 +367,10 @@ class AVIAN_MainWindow(object):
             # curve.setDownsampling(auto=True, method='mean', ds=3)
             self.curves.append(curve)
 
-    # def _init_psd(self):
-    #     # self.psd_plot = self.win.addPlot(row=0, col=1, rowspan=len(self.exg_channels) // 2)
-    #     # self.psd_plot.showAxis('left', False)
-    #     # self.psd_plot.setMenuEnabled('left', False)
-    #     # self.psd_plot.setTitle('PSD Plot')
-    #     # self.psd_plot.setLogMode(False, True)
-    #     self.psd_curves = list()
-    #     self.psd_size = DataFilter.get_nearest_power_of_two(self.sampling_rate)
-    # for i in range(len(self.exg_channels)):
-    #     psd_curve = self.psd_plot.plot(pen=self.pens[i % len(self.pens)])
-    #     psd_curve.setDownsampling(auto=True, method='mean', ds=3)
-    #     self.psd_curves.append(psd_curve)
-    #
     def update(self):
         if self.running:
             data = self.board_shim.get_current_board_data(self.num_points)
+
             avg_bands = [0, 0, 0, 0, 0]
             for count, channel in enumerate(self.exg_channels):
                 # plot timeseries
@@ -436,31 +407,49 @@ class AVIAN_MainWindow(object):
 
             avg_bands = [int(x * 100 / len(self.exg_channels)) for x in avg_bands]
 
+            # if self.brainVal == 2:
+
+
+
+            if self.enableTestSignalConverter:
+                self.mySCR.updateSCRData(data)
+
+            self.band_bar.setOpts(height=avg_bands)
+            self.app.processEvents()
+            # if self.audioOn:
+            #     print("AUDIO ON")
+            #     self.musicMaker.musicMaker()
+            # if self.audioOn:
+            #     self.runMusicMaker()
+
             try:
-                self.confidence.setProperty("value", float(self.musicMaker.predictionOut)*100)
+                if self.enableTestSignalConverter:
+                    self.mySCR.getPrediction()
+                    print(self.mySCR.predictionOut)
+
+                self.confidence.setProperty("value", float(self.musicMaker.predictionOut) * 100)
             except:
                 pass
-            self.band_bar.setOpts(height=avg_bands)
-
-            self.app.processEvents()
 
             self.statusbar.showMessage("Current data buffer size: " + str(data.size))
         else:
             pass
 
-######################################
+    ######################################
+    def saveToCSV(self):
+        pass
+
+    def runMusicMaker(self):
+        if self.audioOn:
+            self.musicMaker.musicMaker()
+
     def audioOnAction(self):
         print("AUDIO IS ON")
         self.audioOn = True
 
-
-
-
-
     def audioOffAction(self):
         print("AUDIO IS OFF")
         self.audioOn = False
-
 
     def checkAudioOn(self):
         if self.audioOn:
@@ -482,7 +471,7 @@ class AVIAN_MainWindow(object):
 
     def retranslateUi(self, AVIAN_GUI):
         _translate = QtCore.QCoreApplication.translate
-        AVIAN_GUI.setWindowTitle(_translate("AVIAN_GUI", "AVIAN version 0.7 [Prototype]"))
+        AVIAN_GUI.setWindowTitle(_translate("AVIAN_GUI", "AVIAN version 0.8 [Prototype]"))
         self.start_button.setText(_translate("AVIAN_GUI", "Start"))
         self.stop_button.setText(_translate("AVIAN_GUI", "Stop"))
         self.StateSelect.setItemText(0, _translate("AVIAN_GUI", "Concentration"))
@@ -505,12 +494,12 @@ class AVIAN_MainWindow(object):
         self.playaudio_true_button.setText(_translate("AVIAN_GUI", "True"))
         self.playaudio_false_button.setText(_translate("AVIAN_GUI", "False"))
         self.playaud_label.setText(_translate("AVIAN_GUI", "Play Audio on Threshold Pass"))
-        self.channels_label.setText(_translate("AVIAN_GUI", "Channels:"))
-        self.chan_1.setText(_translate("AVIAN_GUI", "[1]"))
-        self.chan_2.setText(_translate("AVIAN_GUI", "[2]"))
-        self.chan_3.setText(_translate("AVIAN_GUI", "[3]"))
-        self.chan_4.setText(_translate("AVIAN_GUI", "[4]"))
-        self.chan_5.setText(_translate("AVIAN_GUI", "[5]"))
+        # self.channels_label.setText(_translate("AVIAN_GUI", "Channels:"))
+        # self.chan_1.setText(_translate("AVIAN_GUI", "[1]"))
+        # self.chan_2.setText(_translate("AVIAN_GUI", "[2]"))
+        # self.chan_3.setText(_translate("AVIAN_GUI", "[3]"))
+        # self.chan_4.setText(_translate("AVIAN_GUI", "[4]"))
+        # self.chan_5.setText(_translate("AVIAN_GUI", "[5]"))
 
         self.gamma_label.setText(_translate("AVIAN_GUI", "GAMMA"))
         self.delta_label.setText(_translate("AVIAN_GUI", "DELTA"))
