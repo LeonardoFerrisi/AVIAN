@@ -8,6 +8,7 @@ from brainflow.data_filter import DataFilter, FilterTypes, AggOperations, Window
 from board_communicator import Comms
 from music_maker import musicMaker
 import scr
+import time
 
 
 class AVIAN_MainWindow(object):
@@ -239,6 +240,7 @@ class AVIAN_MainWindow(object):
         """
         self.board_shim.prepare_session()
         self.IS_CONNECTED.setText("[ Is connected: True ]")
+        self.timeStart = time.time()
         self.board_shim.start_stream(450000, '')
         self.running = True
 
@@ -272,6 +274,7 @@ class AVIAN_MainWindow(object):
         self.board_shim.release_session()
         self.IS_CONNECTED.setText("[ Is connected: False ]")
         self.running = False
+        self.timeElapsed = time.time() - self.timeStart
         if self.audioOn:
             self.musicMaker.kill()
 
@@ -519,8 +522,6 @@ class AVIAN_MainWindow(object):
 from pyqtgraph import GraphicsLayoutWidget, PlotWidget
 
 if __name__ == "__main__":
-    import sys
-
     app = QtGui.QApplication([])
     AVIAN_GUI = QtWidgets.QMainWindow()
     ui = AVIAN_MainWindow()
