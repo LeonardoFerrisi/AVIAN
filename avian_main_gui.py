@@ -17,6 +17,10 @@ class AVIAN_MainWindow(object):
 
         self.enableTestSignalConverter = False
 
+        self.exg_channels = BoardShim.get_exg_channels(0)
+        self.update_speed_ms = 50
+        self.window_size = 4
+
         AVIAN_GUI.setObjectName("AVIAN_GUI")
         AVIAN_GUI.resize(1650, 920)
         AVIAN_GUI.setWindowIcon(QtGui.QIcon('icon.png'))
@@ -25,9 +29,6 @@ class AVIAN_MainWindow(object):
 
         self.centralwidget = QtWidgets.QWidget(AVIAN_GUI)
         self.centralwidget.setObjectName("centralwidget")
-
-        # init board
-        self._init_board()  # INIT BOARD
 
         # Time Series
         self.TimeSeries = pg.GraphicsLayoutWidget(self.centralwidget)
@@ -175,9 +176,15 @@ class AVIAN_MainWindow(object):
         self.start_button.clicked.connect(self.startAction)
         self.stop_button.clicked.connect(self.stopAction)
 
+        self.connect_button.clicked.connect(self.connectAction)
+        self.disconnect_button.clicked.connect(self.disconnectAction)
+
+
         self.retranslateUi(AVIAN_GUI)
 
         self.running = False
+        self.serialPort = ''
+        self.connected = False
 
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
@@ -234,37 +241,82 @@ class AVIAN_MainWindow(object):
 
         self.audioOn = False  # Audio is default set to false
 
+
+    def disconnectAction(self):
+        if self.connected:
+            self.board_shim.release_session()
+            self.IS_CONNECTED.setText("[ Is connected: False ]")
+
+    def connectAction(self):
+        if not self.connected:
+            # init board
+            self.checkBoardSelect()
+            self._init_board(boardID=self.board_id, serialPort=self.serialPort)  # INIT BOARD
+            self.connected = True
+            self.statusbar.showMessage("CONNECTED")
+            self.IS_CONNECTED.setText("[ Is connected: True ]")
+
+
+    def _init_board(self, boardID: int = -1, serialPort: str = ''):
+        self.myBoard = Comms(boardID=boardID, serial=serialPort)  # Serial is default to nothing
+        self.board_shim = self.myBoard.board
+        # params = BrainFlowInputParams()
+        self.board_id = boardID
+        self.exg_channels = BoardShim.get_exg_channels(self.board_id)
+        self.sampling_rate = BoardShim.get_sampling_rate(self.board_id)
+        self.update_speed_ms = 50
+        self.window_size = 4
+        self.num_points = self.window_size * self.sampling_rate
+        # self.board_shim = BoardShim(self.board_id, params)
+
+        self.psd_size = DataFilter.get_nearest_power_of_two(self.sampling_rate)
+
+    def checkBoardSelect(self):
+        if self.boardSelect.currentText() == "Synthetic":
+            self.board_id = -1
+        elif self.boardSelect.currentText() == "OpenBCI [Cyton]":
+            self.board_id = 0
+            self.serialPort = 'COM3'
+        elif self.boardSelect.currentText() == "Muse (2016) [Requires BLED112]" or self.boardSelect.currentText() == "Muse2 [Requires BLED112]":
+            self.board_id = 22
+            self.serialPort = 'COM3'
+        else:
+            self.board_id = -1
+
     def startAction(self):
         """
         Starts the board and sets running to true
         """
-        self.board_shim.prepare_session()
-        self.IS_CONNECTED.setText("[ Is connected: True ]")
-        self.timeStart = time.time()
-        self.board_shim.start_stream(450000, '')
-        self.running = True
+        if self.connected:
+            self.board_shim.prepare_session()
+            self.IS_CONNECTED.setText("[ Is connected: True ]")
+            self.timeStart = time.time()
+            self.board_shim.start_stream(450000, '')
+            self.running = True
 
-        if self.enableTestSignalConverter:
-            self.mySCR = scr.SignalConverter(newBoardData=self.board_shim.get_current_board_data(self.num_points),
-                                             numEXG=self.myBoard.getEXGChannels(),
-                                             samplingRate=self.myBoard.get_samplingRate())
+            if self.enableTestSignalConverter:
+                self.mySCR = scr.SignalConverter(newBoardData=self.board_shim.get_current_board_data(self.num_points),
+                                                 numEXG=self.myBoard.getEXGChannels(),
+                                                 samplingRate=self.myBoard.get_samplingRate())
 
-        if self.audioOn:
-            # self.musicMaker.brainAnalyzer()
-            self.__init_music_maker()
-            self.musicMaker.brainAnalyzer()
-            # self.runThread1 = Thread(target=self.musicMaker.musicMaker)
-            # self.runThread1.start()
-            # print("RUNNING MM")
-            # self.runThread2 = Thread(target=self.StateProgressListener)
-            # self.runThread2.start()
+            if self.audioOn:
+                # self.musicMaker.brainAnalyzer()
+                self.__init_music_maker()
+                self.musicMaker.brainAnalyzer()
+                # self.runThread1 = Thread(target=self.musicMaker.musicMaker)
+                # self.runThread1.start()
+                # print("RUNNING MM")
+                # self.runThread2 = Thread(target=self.StateProgressListener)
+                # self.runThread2.start()
 
-    # def StateProgressListener(self):
-    #     try:
-    #         myConfidence = self.musicMaker.prediction
-    #         print("FUNCTIONING")
-    #     except:
-    #         print("NOT")
+        # def StateProgressListener(self):
+        #     try:
+        #         myConfidence = self.musicMaker.prediction
+        #         print("FUNCTIONING")
+        #     except:
+        #         print("NOT")
+        else:
+            self.statusbar.showMessage("PLEASE CONNECT THE BOARD BEFORE YOU START")
 
     def modStateProgressBar(self, newValue):
         self.confidence.setProperty("value", float(round(newValue, 3)))
@@ -287,20 +339,6 @@ class AVIAN_MainWindow(object):
             self.pens.append(pen)
             brush = pg.mkBrush(colors[i])
             self.brushes.append(brush)
-
-    def _init_board(self):
-        self.myBoard = Comms(serial='')  # Serial is default to nothing
-        self.board_shim = self.myBoard.board
-        # params = BrainFlowInputParams()
-        self.board_id = self.board_shim.board_id
-        self.exg_channels = BoardShim.get_exg_channels(self.board_id)
-        self.sampling_rate = BoardShim.get_sampling_rate(self.board_id)
-        self.update_speed_ms = 50
-        self.window_size = 4
-        self.num_points = self.window_size * self.sampling_rate
-        # self.board_shim = BoardShim(self.board_id, params)
-
-        self.psd_size = DataFilter.get_nearest_power_of_two(self.sampling_rate)
 
     def __init_music_maker(self):
         """
