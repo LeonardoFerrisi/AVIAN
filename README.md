@@ -6,4 +6,5 @@ AVIAN is currently an GUI which display's real time EEG data alogn with metrics 
 
 The software will continue to be updated for the forseeable future.
 
+Before running the first time make sure to run the install_packages.py to install all the neccessary dependencies for AVIAN to run properly
 
