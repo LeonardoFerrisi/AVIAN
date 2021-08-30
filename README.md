@@ -7,5 +7,4 @@ AVIAN is currently an GUI which display's real time EEG data alogn with metrics 
 The software will continue to be updated for the forseeable future.
 Documentation is availible here <link>
 
-- Leonardo Ferrisi, Union College 23'
 
