@@ -6,12 +6,7 @@ from pyqtgraph.Qt import QtGui
 from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds, BrainFlowError
 from brainflow.data_filter import DataFilter, FilterTypes, AggOperations, WindowFunctions, DetrendOperations
 from board_communicator import Comms
-from signal_converter_relay import DataThread
-from music_maker import NOMI as musicMaker
-from music_maker2 import MM as musicMaker2
-from threading import Thread
-import random
-import time
+from music_maker import musicMaker
 import scr
 
 
