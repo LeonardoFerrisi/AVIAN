@@ -9,7 +9,7 @@ from board_communicator import Comms
 from music_maker import musicMaker
 import scr
 import time
-
+import webbrowser
 
 class AVIAN_MainWindow(object):
 
@@ -17,7 +17,7 @@ class AVIAN_MainWindow(object):
 
         self.enableTestSignalConverter = False
 
-        self.exg_channels = BoardShim.get_exg_channels(0)
+
         self.update_speed_ms = 50
         self.window_size = 4
 
@@ -36,16 +36,16 @@ class AVIAN_MainWindow(object):
         self.TimeSeries.setGeometry(QtCore.QRect(9, 9, 611, 851))
         self.TimeSeries.setObjectName("TimeSeries")
 
-        # init time series
-        self._init_pens()
-        self._init_time_series()
+        # # init time series
+        # self._init_pens()
+        # self._init_time_series()
 
         self.BandPowers = pg.GraphicsLayoutWidget(self.centralwidget)
         self.BandPowers.setBackground('w')
         self.BandPowers.setGeometry(QtCore.QRect(1090, 10, 551, 511))
         self.BandPowers.setObjectName("BandPowers")
 
-        self._init_band_powers()
+        # self._init_band_powers()
 
         self.start_button = QtWidgets.QPushButton(self.centralwidget)
         self.start_button.setGeometry(QtCore.QRect(640, 140, 75, 23))
@@ -179,7 +179,10 @@ class AVIAN_MainWindow(object):
         self.connect_button.clicked.connect(self.connectAction)
         self.disconnect_button.clicked.connect(self.disconnectAction)
 
-
+        self.actionSave_as_CSV.triggered.connect(self.saveToCSV)
+        self.actionGithub.triggered.connect(self.sendToGithub)
+        self.actionDocumentation.triggered.connect(self.sendToDocumentation)
+        
         self.retranslateUi(AVIAN_GUI)
 
         self.running = False
@@ -255,6 +258,12 @@ class AVIAN_MainWindow(object):
             self.connected = True
             self.statusbar.showMessage("CONNECTED")
             self.IS_CONNECTED.setText("[ Is connected: True ]")
+            self.exg_channels = BoardShim.get_exg_channels(self.board_id)
+            # init time series
+            self._init_pens()
+            self._init_time_series()
+            self._init_band_powers()
+
 
 
     def _init_board(self, boardID: int = -1, serialPort: str = ''):
@@ -322,11 +331,15 @@ class AVIAN_MainWindow(object):
         self.confidence.setProperty("value", float(round(newValue, 3)))
 
     def stopAction(self):
+        self.statusbar.showMessage("stopping session...")
+        self.dataOut = self.board_shim.get_board_data()
         self.board_shim.stop_stream()
         self.board_shim.release_session()
+        self.statusbar.showMessage("session released")
         self.IS_CONNECTED.setText("[ Is connected: False ]")
         self.running = False
         self.timeElapsed = time.time() - self.timeStart
+        self.statusbar.showMessage("Time elapsed since start: " + str(round(self.timeElapsed,4)) + " seconds")
         if self.audioOn:
             self.musicMaker.kill()
 
@@ -375,6 +388,9 @@ class AVIAN_MainWindow(object):
         self.musicMaker.brainStateVal = 0
 
     def _init_band_powers(self):
+        """
+        Initialize band power plot
+        """
         self.band_plot = self.BandPowers.addPlot(row=len(self.exg_channels) // 2, col=1,
                                                  rowspan=len(self.exg_channels) // 2)
         self.band_plot.showAxis('left', True)
@@ -388,6 +404,9 @@ class AVIAN_MainWindow(object):
         self.band_plot.addItem(self.band_bar)
 
     def _init_time_series(self):
+        """
+        Initialize time series plot
+        """
         self.plots = list()
         self.curves = list()
         for i in range(len(self.exg_channels)):
@@ -473,7 +492,15 @@ class AVIAN_MainWindow(object):
 
     ######################################
     def saveToCSV(self):
-        pass
+        DataFilter.write_file(self.dataOut, "session.csv", 'w') # use a for append instead
+
+        # recommended use with pandas.to_csv()
+
+    def sendToGithub(self):
+        webbrowser.open("https://github.com/LeonardoFerrisi/AVIAN", new=2) # 2 opens in a new tab
+
+    def sendToDocumentation(self):
+        webbrowser.open("https://docs.google.com/document/d/1QeNviy7b-XDDSJyjOnx1HarZ4NYg62vC9swysBj7l64/edit#heading=h.l4a81ocf76sq", new=2)
 
     def runMusicMaker(self):
         if self.audioOn:
