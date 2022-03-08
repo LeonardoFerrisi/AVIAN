@@ -23,9 +23,9 @@ class audioFeedback:
         self.newBoard = inputboard
         self.brainStateVal = brainStateVal  # either concentration or relaxation
         self.prediction = None
-        self.nMusicChannels = None
+        self.nAudChannels = None
         self.predictionOut = None
-        self.keepMMAlive = True
+        self.keepAFalive = True
         self.showGatheringDataMsg = debugMsg
 
     def playWav(self, filename, channelNum):
@@ -72,12 +72,12 @@ class audioFeedback:
             filenames = {0: 'first_layer_r.wav', 1: 'second_layer_r.wav', 2: 'third_layer_r.wav',
                          3: 'fourth_layer_r.wav', 4: 'fifth_layer_r.wav'}
 
-        self.nMusicChannels = len(filenames)
+        self.nAudChannels = len(filenames)
         self.playWav(
-            f"{musicFolder}{os.path.sep}bolero_snare_drum.wav", self.nMusicChannels)
-        self.increaseVolume(self.nMusicChannels)
+            f"{musicFolder}{os.path.sep}bolero_snare_drum.wav", self.nAudChannels)
+        self.increaseVolume(self.nAudChannels)
 
-        for chan in range(self.nMusicChannels):
+        for chan in range(self.nAudChannels):
             # self.multiplayer.loop(filename=f"{musicFolder}{filenames[chan]}", channel=chan,loopTimes=100)
 
             self.playWav(f"{musicFolder}{os.path.sep}{filenames[chan]}", chan)
@@ -86,7 +86,7 @@ class audioFeedback:
 
     def predToWavFeats(self, avg_prediction):
         """
-        Gets prediction in MusicMaker (avg of the last 5 predictions output by brainAnalyzer)
+        Gets prediction in audioFeedback (avg of the last 5 predictions output by brainAnalyzer)
         and gets nMusicChannels from loadWav
         For each prediction, adjusts the volume of the music channels
         Right now, the layering is fixed (First Layer, Second Layer...)
@@ -101,15 +101,15 @@ class audioFeedback:
         if str(avg_prediction) != 'nan':
             thresholds = []
             # turn off the drum beat
-            self.decreaseVolume(self.nMusicChannels)
+            self.decreaseVolume(self.nAudChannels)
             # takes the prediction of brain state and maps it to changes in the way that wav files are being played
             # thresholds = np.linspace(0.5, 0, self.nMusicChannels)
-            if self.nMusicChannels == 5:  # Basically these channels all have different thresholds so different files play in different ways
+            if self.nAudChannels == 5:  # Basically these channels all have different thresholds so different files play in different ways
                 thresholds = [.93, .87, .70, .2, .00]
-            elif self.nMusicChannels == 4:
+            elif self.nAudChannels == 4:
                 thresholds = [.9, .5, .3, .00]
 
-            for chan in range(self.nMusicChannels):
+            for chan in range(self.nAudChannels):
                 if avg_prediction > thresholds[chan]:
                     # print("PREDICTION IS ABOVE THRESHOLD")
                     self.increaseVolume(chan)
@@ -119,7 +119,7 @@ class audioFeedback:
         #     print("gathering data please hold")
             # pass
 
-    def musicMaker(self):
+    def audioF(self):
         # def listener(self, threshold):
         """
         # listens to brain state predictions and uses it to decide how to change the music
@@ -144,9 +144,7 @@ class audioFeedback:
             startTime = time.time()
             critval = 0.99
             counter = 0
-            while self.keepMMAlive:
-
-                # print('is running musicMaker')
+            while self.keepAFalive:
                 self.prediction = self.bciThread.prediction
 
                 pHolder.appendleft(self.prediction)
@@ -178,7 +176,7 @@ class audioFeedback:
         windowSize = 5
         points_per_update = windowSize * samplingRate
 
-        while self.keepMMAlive:
+        while self.keepAFalive:
 
             if BP1 == "theta" and BP2 == "beta":
 
@@ -202,7 +200,7 @@ class audioFeedback:
         """
         pygame.mixer.stop()
         self.bciThread.suicide()
-        self.keepMMAlive = False
+        self.keepAFalive = False
 
     def start(self):
         self.initBoard()
@@ -226,7 +224,7 @@ class audioFeedback:
         :return:
         """
         # a = Thread(target=self.runBCIThread)
-        b = Thread(target=self.musicMaker)
+        b = Thread(target=self.audioF)
         # a.start()
         b.start()
 
