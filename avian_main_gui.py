@@ -1,3 +1,4 @@
+from pyqtgraph import GraphicsLayoutWidget, PlotWidget
 import multiprocessing
 
 from PyQt5 import QtCore, QtWidgets
@@ -6,17 +7,17 @@ from pyqtgraph.Qt import QtGui
 from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds, BrainFlowError
 from brainflow.data_filter import DataFilter, FilterTypes, AggOperations, WindowFunctions, DetrendOperations
 from board_communicator import Comms
-from music_maker import musicMaker
+from sound import audioFeedback
 import scr
 import time
 import webbrowser
+
 
 class AVIAN_MainWindow(object):
 
     def setupUi(self, AVIAN_GUI, application):
 
         self.enableTestSignalConverter = False
-
 
         self.update_speed_ms = 50
         self.window_size = 4
@@ -94,7 +95,8 @@ class AVIAN_MainWindow(object):
         # self.playaudio_true_button.toggled.connect(self.audioOnAction)
         self.playaudio_true_button.clicked.connect(self.audioOnAction)
 
-        self.playaudio_false_button = QtWidgets.QRadioButton(self.centralwidget)
+        self.playaudio_false_button = QtWidgets.QRadioButton(
+            self.centralwidget)
         self.playaudio_false_button.setGeometry(QtCore.QRect(880, 270, 51, 17))
         self.playaudio_false_button.setObjectName("playaudio_false_button")
         # self.playaudio_false_button.toggled.connect(self.audioOffAction)
@@ -182,7 +184,7 @@ class AVIAN_MainWindow(object):
         self.actionSave_as_CSV.triggered.connect(self.saveToCSV)
         self.actionGithub.triggered.connect(self.sendToGithub)
         self.actionDocumentation.triggered.connect(self.sendToDocumentation)
-        
+
         self.retranslateUi(AVIAN_GUI)
 
         self.running = False
@@ -197,9 +199,11 @@ class AVIAN_MainWindow(object):
 
     def _init_value_labels(self):
         self.horizontalLayoutWidget = QtWidgets.QWidget(self.centralwidget)
-        self.horizontalLayoutWidget.setGeometry(QtCore.QRect(1180, 530, 461, 21))
+        self.horizontalLayoutWidget.setGeometry(
+            QtCore.QRect(1180, 530, 461, 21))
         self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
-        self.band_label_holder = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
+        self.band_label_holder = QtWidgets.QHBoxLayout(
+            self.horizontalLayoutWidget)
         self.band_label_holder.setContentsMargins(0, 0, 0, 0)
         self.band_label_holder.setObjectName("band_label_holder")
 
@@ -220,9 +224,11 @@ class AVIAN_MainWindow(object):
         self.band_label_holder.addWidget(self.alpha_label)
 
         self.horizontalLayoutWidget_2 = QtWidgets.QWidget(self.centralwidget)
-        self.horizontalLayoutWidget_2.setGeometry(QtCore.QRect(1180, 560, 461, 21))
+        self.horizontalLayoutWidget_2.setGeometry(
+            QtCore.QRect(1180, 560, 461, 21))
         self.horizontalLayoutWidget_2.setObjectName("horizontalLayoutWidget_2")
-        self.value_holder = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget_2)
+        self.value_holder = QtWidgets.QHBoxLayout(
+            self.horizontalLayoutWidget_2)
         self.value_holder.setContentsMargins(0, 0, 0, 0)
         self.value_holder.setObjectName("value_holder")
 
@@ -244,7 +250,6 @@ class AVIAN_MainWindow(object):
 
         self.audioOn = False  # Audio is default set to false
 
-
     def disconnectAction(self):
         if self.connected:
             self.board_shim.release_session()
@@ -254,7 +259,8 @@ class AVIAN_MainWindow(object):
         if not self.connected:
             # init board
             self.checkBoardSelect()
-            self._init_board(boardID=self.board_id, serialPort=self.serialPort)  # INIT BOARD
+            self._init_board(boardID=self.board_id,
+                             serialPort=self.serialPort)  # INIT BOARD
             self.connected = True
             self.statusbar.showMessage("CONNECTED")
             self.IS_CONNECTED.setText("[ Is connected: True ]")
@@ -264,10 +270,9 @@ class AVIAN_MainWindow(object):
             self._init_time_series()
             self._init_band_powers()
 
-
-
     def _init_board(self, boardID: int = -1, serialPort: str = ''):
-        self.myBoard = Comms(boardID=boardID, serial=serialPort)  # Serial is default to nothing
+        # Serial is default to nothing
+        self.myBoard = Comms(boardID=boardID, serial=serialPort)
         self.board_shim = self.myBoard.board
         # params = BrainFlowInputParams()
         self.board_id = boardID
@@ -325,7 +330,8 @@ class AVIAN_MainWindow(object):
         #     except:
         #         print("NOT")
         else:
-            self.statusbar.showMessage("PLEASE CONNECT THE BOARD BEFORE YOU START")
+            self.statusbar.showMessage(
+                "PLEASE CONNECT THE BOARD BEFORE YOU START")
 
     def modStateProgressBar(self, newValue):
         self.confidence.setProperty("value", float(round(newValue, 3)))
@@ -339,14 +345,16 @@ class AVIAN_MainWindow(object):
         self.IS_CONNECTED.setText("[ Is connected: False ]")
         self.running = False
         self.timeElapsed = time.time() - self.timeStart
-        self.statusbar.showMessage("Time elapsed since start: " + str(round(self.timeElapsed,4)) + " seconds")
+        self.statusbar.showMessage(
+            "Time elapsed since start: " + str(round(self.timeElapsed, 4)) + " seconds")
         if self.audioOn:
             self.musicMaker.kill()
 
     def _init_pens(self):
         self.pens = list()
         self.brushes = list()
-        colors = ['#A54E4E', '#A473B6', '#5B45A4', '#2079D2', '#32B798', '#2FA537', '#9DA52F', '#A57E2F', '#A53B2F']
+        colors = ['#A54E4E', '#A473B6', '#5B45A4', '#2079D2',
+                  '#32B798', '#2FA537', '#9DA52F', '#A57E2F', '#A53B2F']
         for i in range(len(colors)):
             pen = pg.mkPen({'color': colors[i], 'width': 1})
             self.pens.append(pen)
@@ -370,7 +378,8 @@ class AVIAN_MainWindow(object):
         else:
             self.brainVal = 0
 
-        self.musicMaker = musicMaker(self.myBoard, brainStateVal=self.brainVal)
+        self.musicMaker = audioFeedback(
+            self.myBoard, brainStateVal=self.brainVal)
         # self.musicMaker.start()
         self.musicMaker.loadWav()
         self.ourPrediction = self.musicMaker.prediction
@@ -400,7 +409,8 @@ class AVIAN_MainWindow(object):
         self.band_plot.setTitle('BandPower Plot')
         y = [0, 0, 0, 0, 0]
         x = [1, 2, 3, 4, 5]
-        self.band_bar = pg.BarGraphItem(x=x, height=y, width=0.8, pen=self.pens[0], brush=self.brushes[0])
+        self.band_bar = pg.BarGraphItem(
+            x=x, height=y, width=0.8, pen=self.pens[0], brush=self.brushes[0])
         self.band_plot.addItem(self.band_bar)
 
     def _init_time_series(self):
@@ -429,7 +439,8 @@ class AVIAN_MainWindow(object):
             avg_bands = [0, 0, 0, 0, 0]
             for count, channel in enumerate(self.exg_channels):
                 # plot timeseries
-                DataFilter.detrend(data[channel], DetrendOperations.CONSTANT.value)
+                DataFilter.detrend(
+                    data[channel], DetrendOperations.CONSTANT.value)
                 DataFilter.perform_bandpass(data[channel], self.sampling_rate, 51.0, 100.0, 2,
                                             FilterTypes.BUTTERWORTH.value, 0)
                 DataFilter.perform_bandpass(data[channel], self.sampling_rate, 51.0, 100.0, 2,
@@ -448,23 +459,33 @@ class AVIAN_MainWindow(object):
                                                         self.sampling_rate,
                                                         WindowFunctions.BLACKMAN_HARRIS.value)
 
-                    avg_bands[0] = avg_bands[0] + DataFilter.get_band_power(psd_data, 1.0, 4.0)  # Delta
-                    avg_bands[1] = avg_bands[1] + DataFilter.get_band_power(psd_data, 4.0, 7.0)  # Theta
-                    avg_bands[2] = avg_bands[2] + DataFilter.get_band_power(psd_data, 7.0, 13.0)  # Alpha
-                    avg_bands[3] = avg_bands[3] + DataFilter.get_band_power(psd_data, 13.0, 30.0)  # Beta
-                    avg_bands[4] = avg_bands[4] + DataFilter.get_band_power(psd_data, 30.0, 50.0)  # Gamma
+                    avg_bands[0] = avg_bands[0] + \
+                        DataFilter.get_band_power(psd_data, 1.0, 4.0)  # Delta
+                    avg_bands[1] = avg_bands[1] + \
+                        DataFilter.get_band_power(psd_data, 4.0, 7.0)  # Theta
+                    avg_bands[2] = avg_bands[2] + \
+                        DataFilter.get_band_power(psd_data, 7.0, 13.0)  # Alpha
+                    avg_bands[3] = avg_bands[3] + \
+                        DataFilter.get_band_power(psd_data, 13.0, 30.0)  # Beta
+                    avg_bands[4] = avg_bands[4] + \
+                        DataFilter.get_band_power(
+                            psd_data, 30.0, 50.0)  # Gamma
 
-                    self.alpha_value.setText("[" + str(round(avg_bands[2], 3)) + "]")
-                    self.beta_value.setText("[" + str(round(avg_bands[3], 3)) + "]")
-                    self.theta_value.setText("[" + str(round(avg_bands[1], 3)) + "]")
-                    self.delta_value.setText("[" + str(round(avg_bands[0], 3)) + "]")
-                    self.gamma_value.setText("[" + str(round(avg_bands[4], 3)) + "]")
+                    self.alpha_value.setText(
+                        "[" + str(round(avg_bands[2], 3)) + "]")
+                    self.beta_value.setText(
+                        "[" + str(round(avg_bands[3], 3)) + "]")
+                    self.theta_value.setText(
+                        "[" + str(round(avg_bands[1], 3)) + "]")
+                    self.delta_value.setText(
+                        "[" + str(round(avg_bands[0], 3)) + "]")
+                    self.gamma_value.setText(
+                        "[" + str(round(avg_bands[4], 3)) + "]")
 
-            avg_bands = [int(x * 100 / len(self.exg_channels)) for x in avg_bands]
+            avg_bands = [int(x * 100 / len(self.exg_channels))
+                         for x in avg_bands]
 
             # if self.brainVal == 2:
-
-
 
             if self.enableTestSignalConverter:
                 self.mySCR.updateSCRData(data)
@@ -482,25 +503,30 @@ class AVIAN_MainWindow(object):
                     self.mySCR.getPrediction()
                     print(self.mySCR.predictionOut)
 
-                self.confidence.setProperty("value", float(self.musicMaker.predictionOut) * 100)
+                self.confidence.setProperty("value", float(
+                    self.musicMaker.predictionOut) * 100)
             except:
                 pass
 
-            self.statusbar.showMessage("Current data buffer size: " + str(data.size))
+            self.statusbar.showMessage(
+                "Current data buffer size: " + str(data.size))
         else:
             pass
 
     ######################################
     def saveToCSV(self):
-        DataFilter.write_file(self.dataOut, "session.csv", 'w') # use a for append instead
+        DataFilter.write_file(self.dataOut, "session.csv",
+                              'w')  # use a for append instead
 
         # recommended use with pandas.to_csv()
 
     def sendToGithub(self):
-        webbrowser.open("https://github.com/LeonardoFerrisi/AVIAN", new=2) # 2 opens in a new tab
+        # 2 opens in a new tab
+        webbrowser.open("https://github.com/LeonardoFerrisi/AVIAN", new=2)
 
     def sendToDocumentation(self):
-        webbrowser.open("https://docs.google.com/document/d/1QeNviy7b-XDDSJyjOnx1HarZ4NYg62vC9swysBj7l64/edit#heading=h.l4a81ocf76sq", new=2)
+        webbrowser.open(
+            "https://docs.google.com/document/d/1QeNviy7b-XDDSJyjOnx1HarZ4NYg62vC9swysBj7l64/edit#heading=h.l4a81ocf76sq", new=2)
 
     def runMusicMaker(self):
         if self.audioOn:
@@ -534,29 +560,41 @@ class AVIAN_MainWindow(object):
 
     def retranslateUi(self, AVIAN_GUI):
         _translate = QtCore.QCoreApplication.translate
-        AVIAN_GUI.setWindowTitle(_translate("AVIAN_GUI", "AVIAN version 0.8 [Prototype]"))
+        AVIAN_GUI.setWindowTitle(_translate(
+            "AVIAN_GUI", "AVIAN version 0.8 [Prototype]"))
         self.start_button.setText(_translate("AVIAN_GUI", "Start"))
         self.stop_button.setText(_translate("AVIAN_GUI", "Stop"))
-        self.StateSelect.setItemText(0, _translate("AVIAN_GUI", "Concentration"))
+        self.StateSelect.setItemText(
+            0, _translate("AVIAN_GUI", "Concentration"))
         self.StateSelect.setItemText(1, _translate("AVIAN_GUI", "Relaxation"))
         self.StateSelect.setItemText(2, _translate("AVIAN_GUI", "Theta/Beta"))
-        self.StateSelect.setItemText(3, _translate("AVIAN_GUI", "Alpha Threshold"))
-        self.StateSelect.setItemText(4, _translate("AVIAN_GUI", "Beta Threshold"))
-        self.star_one.setText(_translate("AVIAN_GUI", "* Make Sure Board is connected before Starting!"))
-        self.star_two.setText(_translate("AVIAN_GUI", "** Select the board type below"))
+        self.StateSelect.setItemText(
+            3, _translate("AVIAN_GUI", "Alpha Threshold"))
+        self.StateSelect.setItemText(
+            4, _translate("AVIAN_GUI", "Beta Threshold"))
+        self.star_one.setText(_translate(
+            "AVIAN_GUI", "* Make Sure Board is connected before Starting!"))
+        self.star_two.setText(_translate(
+            "AVIAN_GUI", "** Select the board type below"))
         self.boardSelect.setItemText(0, _translate("AVIAN_GUI", "Synthetic"))
-        self.boardSelect.setItemText(1, _translate("AVIAN_GUI", "OpenBCI [Cyton]"))
-        self.boardSelect.setItemText(2, _translate("AVIAN_GUI", "Muse (2016) [Requires BLED112]"))
-        self.boardSelect.setItemText(3, _translate("AVIAN_GUI", "Muse2 [Requires BLED112]"))
-        self.selectmetric.setText(_translate("AVIAN_GUI", "Select Metric to estimate:"))
+        self.boardSelect.setItemText(
+            1, _translate("AVIAN_GUI", "OpenBCI [Cyton]"))
+        self.boardSelect.setItemText(2, _translate(
+            "AVIAN_GUI", "Muse (2016) [Requires BLED112]"))
+        self.boardSelect.setItemText(3, _translate(
+            "AVIAN_GUI", "Muse2 [Requires BLED112]"))
+        self.selectmetric.setText(_translate(
+            "AVIAN_GUI", "Select Metric to estimate:"))
 
-        self.IS_CONNECTED.setText(_translate("AVIAN_GUI", "[ Is connected: False ]"))
+        self.IS_CONNECTED.setText(_translate(
+            "AVIAN_GUI", "[ Is connected: False ]"))
 
         self.connect_button.setText(_translate("AVIAN_GUI", "Connect"))
         self.disconnect_button.setText(_translate("AVIAN_GUI", "Disconnect"))
         self.playaudio_true_button.setText(_translate("AVIAN_GUI", "True"))
         self.playaudio_false_button.setText(_translate("AVIAN_GUI", "False"))
-        self.playaud_label.setText(_translate("AVIAN_GUI", "Play Audio on Threshold Pass"))
+        self.playaud_label.setText(_translate(
+            "AVIAN_GUI", "Play Audio on Threshold Pass"))
         # self.channels_label.setText(_translate("AVIAN_GUI", "Channels:"))
         # self.chan_1.setText(_translate("AVIAN_GUI", "[1]"))
         # self.chan_2.setText(_translate("AVIAN_GUI", "[2]"))
@@ -581,10 +619,9 @@ class AVIAN_MainWindow(object):
         self.menuHelp.setTitle(_translate("AVIAN_GUI", "Help"))
         self.actionSave_as_CSV.setText(_translate("AVIAN_GUI", "Save as CSV"))
         self.actionGithub.setText(_translate("AVIAN_GUI", "Github"))
-        self.actionDocumentation.setText(_translate("AVIAN_GUI", "Documentation"))
+        self.actionDocumentation.setText(
+            _translate("AVIAN_GUI", "Documentation"))
 
-
-from pyqtgraph import GraphicsLayoutWidget, PlotWidget
 
 if __name__ == "__main__":
     app = QtGui.QApplication([])
