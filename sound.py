@@ -10,7 +10,7 @@ from threading import Thread
 import os
 import numpy as np
 from signal_converter_relay import DataThread
-from board_communicator import Comms as boardComm
+from bc import Comms as boardComm
 # from theremin import Theremin
 from numpy_ringbuffer import RingBuffer
 from brainflow import DataFilter, FilterTypes, AggOperations, WindowFunctions, DetrendOperations
