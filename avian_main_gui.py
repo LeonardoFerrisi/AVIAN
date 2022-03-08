@@ -8,7 +8,6 @@ from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds, Brai
 from brainflow.data_filter import DataFilter, FilterTypes, AggOperations, WindowFunctions, DetrendOperations
 from board_communicator import Comms
 from sound import audioFeedback
-import scr
 import time
 import webbrowser
 
