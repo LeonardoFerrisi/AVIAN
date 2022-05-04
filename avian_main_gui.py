@@ -11,6 +11,8 @@ from sound import audioFeedback
 import time
 import webbrowser
 
+# TODO: Remove Signal Converter Relay, replace with trinity.sfpr backend port
+#       avain_main_gui.py should replace out.py
 
 class AVIAN_MainWindow(object):
 
