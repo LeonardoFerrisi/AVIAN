@@ -3,6 +3,7 @@ from brainflow.board_shim import BoardShim, BrainFlowInputParams, LogLevels, Boa
 from brainflow.data_filter import DataFilter, FilterTypes, AggOperations, WindowFunctions, DetrendOperations
 import time
 import argparse
+import zmq
 
 
 class Comms:
@@ -10,7 +11,16 @@ class Comms:
     Class for communciation between a wireless EEG amplifier and the computer
     '''
 
-    def __init__(self, boardID=-1, serialPort='', useArgs=True):
+    def __init__(self, boardID=-1, serialPort='', useArgs=True, socketAddr='2345'):
+        
+        # socket stuff
+        self.ctx = zmq.Context()
+        self.sock = self.ctx.socket(zmq.PUB)
+        fullAddr = "tcp://*:"+str(socketAddr)
+        self.sock.bind(fullAddr)
+        
+        
+        
         BoardShim.enable_dev_board_logger()
         board_id = boardID
         serial_port=''
@@ -41,7 +51,8 @@ class Comms:
 
         self.board.prepare_session()
         self.board.start_stream(45000, 'streaming_board://225.1.1.1:6677')
-
+        time.sleep(1)
+        self.sock.send_string("a")
         if not inf:
             self.stop(delay=timeSleep)
 
@@ -68,6 +79,13 @@ if __name__ == "__main__":
     # comms = Comms(boardID = 0, serialPort='COM4')
     # comms = Comms(boardID = -1)
 
-    comms.start(inf=True)
+    comms.start(inf=True) # TODO: Make start non default, turned on via zmq
+
+    # block to send confirmation message to
+
+
+    ######
+
     end = input("PRESS ENTER TO EXIT")
+
     comms.stop()

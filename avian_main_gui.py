@@ -11,6 +11,14 @@ from sound import audioFeedback
 import time
 import webbrowser
 
+import backend.client as client
+import backend.sfpr as sfpr
+import backend.win_run as win_run
+import backend.linux_run as linux_run
+import backend.globalStart as globalStart
+
+import zmq
+
 # TODO: Remove Signal Converter Relay, replace with trinity.sfpr backend port
 #       avain_main_gui.py should replace out.py
 
@@ -19,6 +27,7 @@ class AVIAN_MainWindow(object):
     def setupUi(self, AVIAN_GUI, application):
 
         self.enableTestSignalConverter = False
+        self.backendActive = False
 
         self.update_speed_ms = 50
         self.window_size = 4
@@ -259,17 +268,30 @@ class AVIAN_MainWindow(object):
     def connectAction(self):
         if not self.connected:
             # init board
-            self.checkBoardSelect()
-            self._init_board(boardID=self.board_id,
-                             serialPort=self.serialPort)  # INIT BOARD
-            self.connected = True
-            self.statusbar.showMessage("CONNECTED")
-            self.IS_CONNECTED.setText("[ Is connected: True ]")
-            self.exg_channels = BoardShim.get_exg_channels(self.board_id)
-            # init time series
-            self._init_pens()
-            self._init_time_series()
-            self._init_band_powers()
+            # self.checkBoardSelect()
+            # self._init_board(boardID=self.board_id,
+            #                  serialPort=self.serialPort)  # INIT BOARD
+            # self.connected = True
+            # self.statusbar.showMessage("CONNECTED")
+            # self.IS_CONNECTED.setText("[ Is connected: True ]")
+            # self.exg_channels = BoardShim.get_exg_channels(self.board_id)
+            # # init time series
+            # self._init_pens()
+            # self._init_time_series()
+            # self._init_band_powers()
+
+            globalStart.gStart(self.board, self.serialPort)
+
+            self.defaultAddr = '2345' # The default address to communicate with Comms
+            self.ctx = zmq.Context()
+            self.sock = self.ctx.socket(zmq.SUB)
+            self.sock.connect("tcp://127.0.0.1:"+str(self.defaultAddr))
+            self.sock.subscribe("")  # Subscribe to all topics
+
+            msg = self.sock.recv_string()
+            if msg=='a':
+                self.connected = True
+
 
     def _init_board(self, boardID: int = -1, serialPort: str = ''):
         # Serial is default to nothing
@@ -302,12 +324,21 @@ class AVIAN_MainWindow(object):
         """
         Starts the board and sets running to true
         """
+
+        # Start backend
+        if self.backendActive==False:
+            globalStart.gStart(self.board_id, self.serialPort)
+            self.backendActive = True
+
         if self.connected:
-            self.board_shim.prepare_session()
+            # self.board_shim.prepare_session()
             self.IS_CONNECTED.setText("[ Is connected: True ]")
             self.timeStart = time.time()
-            self.board_shim.start_stream(450000, '')
+            # self.board_shim.start_stream(450000, '')
             self.running = True
+
+            # if self.enableTestSignalConverter:
+            #     self.mySCR 
 
             if self.enableTestSignalConverter:
                 self.mySCR = scr.SignalConverter(newBoardData=self.board_shim.get_current_board_data(self.num_points),
